@@ -1,0 +1,382 @@
+
+#include <assert.h>
+#include "sdlJeu.h"
+
+const int TAILLE_SPRITE=32;
+
+SDL_Surface *SDL_load_image(const char* filename );
+void SDL_apply_surface( SDL_Surface* source, SDL_Surface* destination, int x, int y );
+
+
+
+void sdljeuInit(sdlJeu *pSdlJeu)
+{
+	Jeu *pJeu;
+	int dimx, dimy;
+
+    jeuGetScore("data/max_score.txt",&(pSdlJeu->jeu));
+
+
+	pJeu = &(pSdlJeu->jeu);
+	jeuInit(pJeu);
+	TTF_Init();
+
+    /*Chargement de la police*/
+    pSdlJeu->police = TTF_OpenFont("data/Anasthesia.ttf", 32);
+    pSdlJeu->police_menu = TTF_OpenFont("data/Mashed.ttf", 32);
+
+	assert( SDL_Init( SDL_INIT_EVERYTHING )!= -1 );
+
+
+	dimx = getDimX( jeuGetConstTerrainPtr(pJeu) );
+	dimy = getDimY( jeuGetConstTerrainPtr(pJeu) );
+	dimx = dimx * TAILLE_SPRITE;
+	dimy = dimy * TAILLE_SPRITE+50;
+	pSdlJeu->surface_ecran = SDL_SetVideoMode(dimx, dimy, 32, SDL_SWSURFACE );
+	assert( pSdlJeu->surface_ecran!=NULL);
+	SDL_WM_SetCaption( "Snake", NULL );
+
+
+	pSdlJeu->surface_snake = SDL_load_image("data/cercle-vert.bmp");
+	if (pSdlJeu->surface_snake==NULL)
+		pSdlJeu->surface_snake = SDL_load_image("../data/cercle-vert.bmp");
+	assert( pSdlJeu->surface_snake!=NULL);
+
+	pSdlJeu->surface_mur = SDL_load_image("data/mur1.bmp");
+	if (pSdlJeu->surface_mur==NULL)
+		pSdlJeu->surface_mur = SDL_load_image("../data/mur1.bmp");
+	assert( pSdlJeu->surface_mur!=NULL);
+
+    pSdlJeu->surface_nourriture = SDL_load_image("data/pomme1.bmp");
+	if (pSdlJeu->surface_mur==NULL)
+		pSdlJeu->surface_mur = SDL_load_image("../data/pomme1.bmp");
+	assert( pSdlJeu->surface_mur!=NULL);
+
+
+}
+
+void sdljeuAff(sdlJeu *pSdlJeu)
+{
+	int x,y,i;
+    Cellule *temp;
+	const Terrain *pTer = jeuGetConstTerrainPtr(&(pSdlJeu->jeu));
+	const Snake *pSnk = jeuGetConstSnakePtr(&(pSdlJeu->jeu));
+	const Nourriture *pNour = jeuGetConstNourPtr(&(pSdlJeu->jeu));
+	temp=pSnk->snkListe->adPremiere;
+
+	/* Remplir l'écran de blanc */
+	SDL_FillRect( pSdlJeu->surface_ecran, &pSdlJeu->surface_ecran->clip_rect, SDL_MapRGB( pSdlJeu->surface_ecran->format, 0xFF, 0xFF, 0xFF ) );
+
+	for (x=0;x<getDimX(pTer);++x)
+		for (y=0;y<getDimY(pTer);++y)
+			if (terGetXY(pTer,x,y)=='#')
+				SDL_apply_surface(  pSdlJeu->surface_mur, pSdlJeu->surface_ecran, x*TAILLE_SPRITE, y*TAILLE_SPRITE);
+
+	/* Copier le sprite de Snake sur l'écran */
+	for (i=0;i<snkGetTaille(pSnk);i++)
+	{
+	   SDL_apply_surface(  pSdlJeu->surface_snake, pSdlJeu->surface_ecran, celGetX(temp)*TAILLE_SPRITE,  celGetY(temp)*TAILLE_SPRITE );
+	   temp=temp->suivant;
+	}
+
+	SDL_apply_surface(  pSdlJeu->surface_nourriture, pSdlJeu->surface_ecran, nourGetX(pNour)*TAILLE_SPRITE,nourGetY(pNour)*TAILLE_SPRITE );
+}
+
+void sdlInstructionAff(sdlJeu *pSdlJeu)
+{
+    SDL_FillRect( pSdlJeu->surface_ecran, &pSdlJeu->surface_ecran->clip_rect, SDL_MapRGB( pSdlJeu->surface_ecran->format, 0xFF, 0xFF, 0xFF ) );
+}
+
+void sdlInstruction(sdlJeu *pSdlJeu)
+{
+    SDL_Event event;
+    int continue_boucle = 1;
+    SDL_Color couleurNoire = {0, 0, 0}, couleurBlanche = {255, 255, 255};
+    char t[20];
+
+    sdlInstructionAff(pSdlJeu);
+    jeuInstruction("data/instruction.txt",&(pSdlJeu->jeu));
+    pSdlJeu->surface_instruction = TTF_RenderText_Shaded(pSdlJeu->police_menu,pSdlJeu->jeu.instruction,couleurNoire,couleurBlanche);
+
+    sprintf(t,"Retour");
+    pSdlJeu->surface_choix4 = TTF_RenderText_Shaded(pSdlJeu->police_menu, t, couleurNoire, couleurBlanche);
+
+    /* tant que ce n'est pas la fin ... */
+	while ( continue_boucle == 1 )
+	{
+		/* tant qu'il y a des evenements à traiter : cette boucle n'est pas bloquante */
+		while ( SDL_PollEvent( &event ) )
+		{
+			/* Si l'utilisateur a cliqué sur la croix de fermeture */
+			if ( event.type == SDL_QUIT )
+				continue_boucle = 0;
+
+            if ( event.type == SDL_KEYDOWN )
+			{
+				switch ( event.key.keysym.sym )
+				{
+                    case SDLK_r:
+                        continue_boucle = 0;
+                    break;
+                    default: printf("Choix non traité par le programme\n");
+                }
+            }
+        }
+
+		/* on affiche le jeu sur le buffer caché */
+		sdlInstructionAff(pSdlJeu);
+
+		pSdlJeu->pos_choix4.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2 -100;
+        pSdlJeu->pos_choix4.y = 400;
+        SDL_BlitSurface(pSdlJeu->surface_choix4, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_choix4));
+        pSdlJeu->pos_instruction.x = 0;
+        pSdlJeu->pos_instruction.y = 0;
+        SDL_BlitSurface(pSdlJeu->surface_instruction, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_instruction));
+
+        SDL_Flip( pSdlJeu->surface_ecran );
+	}
+}
+void sdlMenuAff(sdlJeu *pSdlJeu)
+{
+    SDL_FillRect( pSdlJeu->surface_ecran, &pSdlJeu->surface_ecran->clip_rect, SDL_MapRGB( pSdlJeu->surface_ecran->format, 0xFF, 0xFF, 0xFF ) );
+}
+
+void sdlMenu (sdlJeu *pSdlJeu)
+{
+    SDL_Event event;
+	int continue_boucle = 1;
+	/*Variables pour l'affichage du score*/
+	SDL_Surface *surface_score=NULL;
+    SDL_Rect pos_score;
+    SDL_Color couleurNoire = {0, 0, 0}, couleurBlanche = {255, 255, 255}, couleurVerte = {10,150,50};
+    char t[20],c1[30],c2[30],c3[30],c0[30];
+
+    sdlMenuAff(pSdlJeu);
+	assert( SDL_Flip( pSdlJeu->surface_ecran )!=-1 );
+
+    /*Initialisation du texte*/
+    sprintf(t, "Snake");
+    pSdlJeu->surface_titre = TTF_RenderText_Shaded(pSdlJeu->police_menu, t, couleurVerte, couleurBlanche);
+    sprintf(c1, "j: Jouer");
+    pSdlJeu->surface_choix1 = TTF_RenderText_Shaded(pSdlJeu->police_menu, c1, couleurNoire, couleurBlanche);
+    sprintf(c2, "i: Instructions");
+    pSdlJeu->surface_choix2 = TTF_RenderText_Shaded(pSdlJeu->police_menu, c2, couleurNoire, couleurBlanche);
+    sprintf(c3, "Meilleur score");
+    pSdlJeu->surface_choix3 = TTF_RenderText_Shaded(pSdlJeu->police_menu, c3, couleurNoire, couleurBlanche);
+    sprintf(c0, "q: Quitter");
+    pSdlJeu->surface_choix0 = TTF_RenderText_Shaded(pSdlJeu->police_menu, c0, couleurNoire, couleurBlanche);
+
+    surface_score = TTF_RenderText_Shaded(pSdlJeu->police_menu, pSdlJeu->jeu.max_score, couleurNoire, couleurBlanche);
+
+	/* tant que ce n'est pas la fin ... */
+	while ( continue_boucle == 1 )
+	{
+		/* tant qu'il y a des evenements à traiter : cette boucle n'est pas bloquante */
+		while ( SDL_PollEvent( &event ) )
+		{
+			/* Si l'utilisateur a cliqué sur la croix de fermeture */
+			if ( event.type == SDL_QUIT )
+				continue_boucle = 0;
+
+            if ( event.type == SDL_KEYDOWN )
+			{
+				switch ( event.key.keysym.sym )
+				{
+                    case SDLK_j:
+                        sdljeuBoucle(pSdlJeu);
+                    break;
+                    case SDLK_i: ;
+                        sdlInstruction(pSdlJeu);
+                    break;
+                    case SDLK_q:
+                        exit (0);
+                    break;
+                    default: printf("Choix non traité par le programme\n");
+                }
+            }
+        }
+
+		/* on affiche le jeu sur le buffer caché */
+		sdlMenuAff(pSdlJeu);
+
+        /*Positionnement des textes en ttf*/
+
+
+		pSdlJeu->pos_titre.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2;
+		pSdlJeu->pos_titre.y = 0;
+        SDL_BlitSurface(pSdlJeu->surface_titre, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_titre)); /* Blit du texte contenant le temps */
+        pSdlJeu->pos_choix1.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2 -100;
+        pSdlJeu->pos_choix1.y = 100;
+        SDL_BlitSurface(pSdlJeu->surface_choix1, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_choix1)); /* Blit du texte contenant le temps */
+        pSdlJeu->pos_choix2.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2 -100;
+        pSdlJeu->pos_choix2.y = 200;
+        SDL_BlitSurface(pSdlJeu->surface_choix2, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_choix2));
+        pSdlJeu->pos_choix3.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2 -100;
+        pSdlJeu->pos_choix3.y = 300;
+        SDL_BlitSurface(pSdlJeu->surface_choix3, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_choix3));
+        pSdlJeu->pos_choix0.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2 -100;
+        pSdlJeu->pos_choix0.y = 400;
+        SDL_BlitSurface(pSdlJeu->surface_choix0, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_choix0));
+
+        pos_score.x =(getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2+180;
+        pos_score.y =300;
+        SDL_BlitSurface(surface_score, NULL, pSdlJeu->surface_ecran, &pos_score);
+
+
+		/* on permute les deux buffers (cette fonction ne doit se faire qu'une seule fois dans a boucle) */
+		SDL_Flip( pSdlJeu->surface_ecran );
+	}
+
+}
+
+
+void sdljeuBoucle(sdlJeu *pSdlJeu)
+{
+	SDL_Event event;
+	int continue_boucle = 1;
+	/*Variables pour l'affichage du score*/
+    SDL_Color couleurNoire = {0, 0, 0}, couleurBlanche = {255, 255, 255};
+    int score,vies,niveau;
+    char t[20],v[20],n[20];
+
+	sdljeuAff(pSdlJeu);
+	assert( SDL_Flip( pSdlJeu->surface_ecran )!=-1 );
+
+    /*Initialisation du texte*/
+    score=pSdlJeu->jeu.snk.score;
+    sprintf(t, "score : %u", score);
+    pSdlJeu->surface_texte = TTF_RenderText_Shaded(pSdlJeu->police, t, couleurNoire, couleurBlanche);
+    vies=pSdlJeu->jeu.snk.vies;
+    sprintf(v, "vies : %u",vies);
+    pSdlJeu->surface_vies = TTF_RenderText_Shaded(pSdlJeu->police, v, couleurNoire, couleurBlanche);
+    niveau=pSdlJeu->jeu.niveau;
+    sprintf(n, "niveau : %u",niveau);
+    pSdlJeu->surface_niveau = TTF_RenderText_Shaded(pSdlJeu->police, n, couleurNoire, couleurBlanche);
+
+
+	/* tant que ce n'est pas la fin ... */
+	while ( continue_boucle == 1 )
+	{
+	    if (jeuPerdre(&(pSdlJeu->jeu)))
+        {
+            continue_boucle = 0;
+            jeuSetScore("data/max_score.txt",&(pSdlJeu->jeu));
+            jeuGetScore("data/max_score.txt",&(pSdlJeu->jeu));
+            jeuInit(&(pSdlJeu->jeu));
+        }
+        /* tant qu'il y a des evenements à traiter : cette boucle n'est pas bloquante */
+		while ( SDL_PollEvent( &event ) )
+		{
+			/* Si l'utilisateur a cliqué sur la croix de fermeture */
+			if ( event.type == SDL_QUIT )
+				continue_boucle = 0;
+
+			/* Si l'utilisateur a appuyé sur une touche */
+			if ( event.type == SDL_KEYDOWN )
+			{
+				switch ( event.key.keysym.sym )
+				{
+				case SDLK_UP:
+                    jeuActionClavier( &(pSdlJeu->jeu), 'h');
+					break;
+				case SDLK_DOWN:
+					jeuActionClavier( &(pSdlJeu->jeu), 'b');
+					break;
+				case SDLK_LEFT:
+					jeuActionClavier( &(pSdlJeu->jeu), 'g');
+					break;
+				case SDLK_RIGHT:
+					jeuActionClavier( &(pSdlJeu->jeu), 'd');
+					break;
+				default: break;
+				}
+			}
+		}
+
+		score=pSdlJeu->jeu.snk.score;
+        sprintf(t, "Score : %u", score); /* On écrit dans la chaîne "temps" le nouveau temps */
+        SDL_FreeSurface(pSdlJeu->surface_texte); /* On supprime la surface précédente de la mémoire avant d'en charger une nouvelle (IMPORTANT) */
+        pSdlJeu->surface_texte = TTF_RenderText_Shaded(pSdlJeu->police, t, couleurNoire, couleurBlanche);
+        vies=pSdlJeu->jeu.snk.vies;
+        sprintf(v, "Vies : %u",vies);
+        pSdlJeu->surface_vies = TTF_RenderText_Shaded(pSdlJeu->police, v, couleurNoire, couleurBlanche);
+        niveau=pSdlJeu->jeu.niveau;
+        sprintf(n, "Niveau %u",niveau);
+        pSdlJeu->surface_niveau = TTF_RenderText_Shaded(pSdlJeu->police, n, couleurNoire, couleurBlanche);
+
+		SDL_Delay(120-jeuGetNiveau(&(pSdlJeu->jeu))*5);
+
+		jeuAvance(&(pSdlJeu->jeu));
+
+		/* on affiche le jeu sur le buffer caché */
+		sdljeuAff(pSdlJeu);
+
+        /*Positionnement des textes en ttf*/
+		pSdlJeu->pos_score.x = 0;
+        pSdlJeu->pos_score.y = getDimY( jeuGetConstTerrainPtr(&(pSdlJeu->jeu)) )*TAILLE_SPRITE;
+        SDL_BlitSurface(pSdlJeu->surface_texte, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_score)); /* Blit du texte contenant le temps */
+        pSdlJeu->pos_vies.x = getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150;
+        pSdlJeu->pos_vies.y = getDimY( jeuGetConstTerrainPtr(&(pSdlJeu->jeu)) )*TAILLE_SPRITE;
+        SDL_BlitSurface(pSdlJeu->surface_vies, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_vies)); /* Blit du texte contenant le temps */
+        pSdlJeu->pos_niveau.x = (getDimX(jeuGetConstTerrainPtr(&(pSdlJeu->jeu)))*TAILLE_SPRITE -150)/2;
+        pSdlJeu->pos_niveau.y = getDimY( jeuGetConstTerrainPtr(&(pSdlJeu->jeu)) )*TAILLE_SPRITE;
+        SDL_BlitSurface(pSdlJeu->surface_niveau, NULL, pSdlJeu->surface_ecran, &(pSdlJeu->pos_niveau));
+
+		/* on permute les deux buffers (cette fonction ne doit se faire qu'une seule fois dans a boucle) */
+		SDL_Flip( pSdlJeu->surface_ecran);
+	}
+}
+
+
+void sdljeuDetruit( sdlJeu *pSdlJeu)
+{
+    TTF_CloseFont(pSdlJeu->police);
+	SDL_FreeSurface( pSdlJeu->surface_snake );
+	SDL_FreeSurface( pSdlJeu->surface_mur );
+	SDL_FreeSurface( pSdlJeu->surface_texte);
+	SDL_FreeSurface( pSdlJeu->surface_niveau);
+	SDL_FreeSurface( pSdlJeu->surface_vies);
+    TTF_Quit();
+	SDL_Quit();
+}
+
+
+
+SDL_Surface *SDL_load_image(const char* filename )
+{
+	/* Temporary storage for the image that's loaded */
+	SDL_Surface* loadedImage = NULL;
+
+	/* The optimized image that will be used */
+	SDL_Surface* optimizedImage = NULL;
+
+	/* Load the image */
+	loadedImage = SDL_LoadBMP( filename );
+
+	/* If nothing went wrong in loading the image */
+	if ( loadedImage != NULL )
+	{
+		/* Create an optimized image */
+		optimizedImage = SDL_DisplayFormat( loadedImage );
+
+		/* Free the old image */
+		SDL_FreeSurface( loadedImage );
+	}
+
+	/* Return the optimized image */
+	return optimizedImage;
+}
+
+
+void SDL_apply_surface( SDL_Surface* source, SDL_Surface* destination, int x, int y )
+{
+	/* Make a temporary rectangle to hold the offsets */
+	SDL_Rect offset;
+
+	/* Give the offsets to the rectangle */
+	offset.x = x;
+	offset.y = y;
+
+	/* Blit the surface */
+	SDL_BlitSurface( source, NULL, destination, &offset );
+}

@@ -1,0 +1,76 @@
+# depslib dependency file v1.0
+1338736815 source:/home/vov/ProjetSnake/svn/src/cellule.c
+	<stdlib.h>
+	"cellule.h"
+
+1338736819 /home/vov/ProjetSnake/svn/src/cellule.h
+
+1338723755 source:/home/vov/ProjetSnake/svn/src/jeu.c
+	<stdio.h>
+	<stdlib.h>
+	"jeu.h"
+	"snake.h"
+	"terrain.h"
+	"nourriture.h"
+
+1338733229 /home/vov/ProjetSnake/svn/src/jeu.h
+	"snake.h"
+	"terrain.h"
+	"nourriture.h"
+
+1338735753 /home/vov/ProjetSnake/svn/src/snake.h
+	"liste.h"
+	"terrain.h"
+	"nourriture.h"
+
+1338877349 /home/vov/ProjetSnake/svn/src/liste.h
+	"cellule.h"
+
+1338733279 /home/vov/ProjetSnake/svn/src/terrain.h
+
+1338879468 /home/vov/ProjetSnake/svn/src/nourriture.h
+	"terrain.h"
+
+1338876059 source:/home/vov/ProjetSnake/svn/src/liste.c
+	<stdlib.h>
+	<stdio.h>
+	"liste.h"
+
+1338889341 source:/home/vov/ProjetSnake/svn/src/main.c
+	<stdio.h>
+	<stdlib.h>
+	"sdlJeu.h"
+	"jeu.h"
+
+1338890138 /home/vov/ProjetSnake/svn/src/sdlJeu.h
+	<SDL/SDL.h>
+	<SDL/SDL_ttf.h>
+	"jeu.h"
+
+1338877701 source:/home/vov/ProjetSnake/svn/src/ncursJeu.c
+	<stdio.h>
+	<ncurses.h>
+	"jeu.h"
+
+1338878965 source:/home/vov/ProjetSnake/svn/src/nourriture.c
+	<stdlib.h>
+	"nourriture.h"
+	"terrain.h"
+
+1338890183 source:/home/vov/ProjetSnake/svn/src/sdlJeu.c
+	<assert.h>
+	"sdlJeu.h"
+
+1338734337 source:/home/vov/ProjetSnake/svn/src/snake.c
+	<stdio.h>
+	<malloc.h>
+	<assert.h>
+	"snake.h"
+
+1338732902 source:/home/vov/ProjetSnake/svn/src/terrain.c
+	"terrain.h"
+	<stdio.h>
+	<stdlib.h>
+	<malloc.h>
+	<assert.h>
+

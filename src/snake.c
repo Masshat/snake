@@ -1,0 +1,350 @@
+/**
+@brief snake.c a le code des fonctions pour le module snake.
+@author Roberto Medina Bonilla & Yoann Jouvent
+@file src/snake.c
+@version 1.0
+@date 2012/06/07
+*/
+#include <stdio.h>
+#include <malloc.h>
+#include <assert.h>
+#include "snake.h"
+
+
+/*Initialise le snake avec ces champs à 0 et le met dans la position (5,5)*/
+void snkInit(Snake *pSnk)
+{
+    pSnk->snkListe=(Liste*)malloc(sizeof(Liste));
+    lisInit(pSnk->snkListe);
+    pSnk->taille=4;
+    pSnk->germ=0;
+    pSnk->posGermX=0;
+    pSnk->posGermY=0;
+    pSnk->score=0;
+    pSnk->dir='n';
+    pSnk->vies=5;
+}
+
+/*Initialise le snake quand il a perdu une vie*/
+void snkInitPerdu(Snake *pSnk)
+{
+    Cellule *temp;
+    while(pSnk->snkListe->adPremiere!=NULL)
+    {
+        temp=pSnk->snkListe->adPremiere;
+        pSnk->snkListe->adPremiere=pSnk->snkListe->adPremiere->suivant;
+        free(temp);
+    }
+    lisInit(pSnk->snkListe);
+    snkCreation(pSnk);
+    pSnk->taille=4;
+    pSnk->germ=0;
+    pSnk->posGermX=0;
+    pSnk->posGermY=0;
+    pSnk->dir='n';
+}
+
+/*Libere la place allouee par le snake*/
+void snkLibere(Snake *pSnk)
+{
+    lisLibere(pSnk->snkListe);
+    free(pSnk->snkListe);
+    pSnk->snkListe=NULL;
+    pSnk->taille=0;
+    pSnk->germ=0;
+    pSnk->posGermX=0;
+    pSnk->posGermY=0;
+    pSnk->score=0;
+}
+
+
+/*--------------------------------Accesseurs------------------------------------------------*/
+
+
+/*Retourne l'abscisse de la tête du snake*/
+const int snkGetX(const Snake *pSnk)
+{
+	return celGetX(lisGetTete(pSnk->snkListe));
+}
+
+/*Retourne l'ordonnée de la tête du snake*/
+const int snkGetY(const Snake *pSnk)
+{
+	return celGetY(lisGetTete(pSnk->snkListe));
+}
+
+/*Retourne la taille du snake*/
+const int snkGetTaille (const Snake *pSnk)
+{
+    return pSnk->taille;
+}
+
+/*Retourne le score du snake*/
+const int snkGetScore(const Snake *pSnk)
+{
+    return(pSnk->score);
+}
+
+/*Retourne l'abscisse de la nouvelle queue qui va être rajoutée*/
+const int snkGetGermX (const Snake *pSnk)
+{
+    return pSnk->posGermX;
+}
+
+/*Retourne l'ordonnée de la nouvelle queue qui va être rajoutée*/
+const int snkGetGermY (const Snake *pSnk)
+{
+    return pSnk->posGermY;
+}
+
+/*Retourne la valeur de germ pour savoir si le snake grandit ou pas*/
+const int snkGetGerm(const Snake *pSnk)
+{
+    return pSnk->germ;
+}
+
+/*Retourne le caractère de la tête du snake*/
+const char snkGetCharXY(const Snake *pSnk)
+{
+    return celGetInfo(lisGetTete(pSnk->snkListe));
+}
+
+/*Retourne la direction du snake*/
+const char snkGetDir(const Snake*pSnk)
+{
+    return pSnk->dir;
+}
+
+/*Retourne le nombre de vies du snake*/
+const int snkGetVies(const Snake*pSnk)
+{
+    return pSnk->vies;
+}
+
+/*---------------------------------------Mutateurs----------------------------------*/
+
+
+/*Change la valeur de la taille du snake avec le paramètre passé*/
+void snkSetTaille (Snake *pSnk)
+{
+    pSnk->taille++;
+}
+
+/*Change la position de la queue qui va être ajoutée*/
+void snkSetGermXY (Snake *pSnk, const int X, const int Y)
+{
+    assert(Y>=0 && X>=0);
+    pSnk->posGermX=X;
+    pSnk->posGermY=Y;
+}
+
+/*Change la valeur de germ pour savoir si on rajoute ou pas une queue*/
+void snkSetGerm (Snake *pSnk, int i)
+{
+    assert(i>=0 && i<=1);
+    pSnk->germ = i;
+}
+
+/*Change la direction du snake*/
+void snkSetDir(Snake *pSnk, const char c)
+{
+    assert(c=='g'||c=='d'||c=='h'||c=='b');
+    pSnk->dir = c;
+}
+
+void snkSetVies(Snake *pSnk, const int i)
+{
+    assert(i>0);
+    pSnk->vies -= i;
+}
+
+/*------------------------------------Tests-------------------------------------------*/
+
+
+/*Teste si le snake a mangé quelque chose, stocke la position de la nourriture pour savoir où rajouter une queue*/
+void snkMange (Snake *pSnk, Nourriture *pNour, const Terrain *pTer)
+{
+    if (snkGetX(pSnk)==nourGetX(pNour) && snkGetY(pSnk)==nourGetY(pNour))
+    {
+        snkSetGermXY(pSnk,nourGetX(pNour),nourGetY(pNour));
+        snkSetGerm (pSnk,1);
+        nourPosition(pTer,pNour);
+        pSnk->score=pSnk->score + 10;
+    }
+}
+
+/*Teste quand la queue a passé par la position de l'ancienne nourriture pour rajouter une queue*/
+void snkGrandit (Snake *pSnk)
+{
+    if ((pSnk->snkListe->adDerniere->x==pSnk->posGermX) && (pSnk->snkListe->adDerniere->y==pSnk->posGermY) \
+         && (snkGetGerm(pSnk)==1))
+    {
+        lisAjoutQueuePos(pSnk->snkListe,snkGetGermX(pSnk), snkGetGermY(pSnk));
+        snkSetGerm(pSnk,0);
+        pSnk->taille++;
+    }
+}
+
+/*Test si le snake ne rentre pas dans lui même*/
+int snkPosValGauche(Snake *pSnk)
+{
+    int i;
+    Cellule *temp;
+    temp = pSnk->snkListe->adPremiere->suivant;
+    for (i=0;i<snkGetTaille(pSnk);i++)
+    {
+        if ((snkGetX(pSnk)-1==celGetX(temp) && (snkGetY(pSnk)==celGetY(temp))))
+            {
+                printf("invalide\n");
+                return 0;
+            }
+        temp=temp->suivant;
+    }
+    return 1;
+}
+
+/*Test si le snake ne rentre pas dans lui même*/
+int snkPosValDroite(Snake *pSnk)
+{
+    int i;
+    Cellule *temp;
+    temp = pSnk->snkListe->adPremiere->suivant;
+    for (i=0;i<snkGetTaille(pSnk);i++)
+    {
+        if ((snkGetX(pSnk)+1==celGetX(temp) && (snkGetY(pSnk)==celGetY(temp))))
+            {
+                printf("invalide\n");
+                return 0;
+            }
+        temp=temp->suivant;
+    }
+    return 1;
+}
+
+/*Test si le snake ne rentre pas dans lui même*/
+int snkPosValBas(Snake *pSnk)
+{
+    int i;
+    Cellule *temp;
+    temp = pSnk->snkListe->adPremiere->suivant;
+    for (i=0;i<snkGetTaille(pSnk);i++)
+    {
+        if ((snkGetX(pSnk)==celGetX(temp) && (snkGetY(pSnk)+1==celGetY(temp))))
+            {
+                printf("invalide\n");
+                return 0;
+            }
+        temp=temp->suivant;
+    }
+    return 1;
+}
+
+/*Test si le snake ne rentre pas dans lui même*/
+int snkPosValHaut(Snake *pSnk)
+{
+    int i;
+    Cellule *temp;
+    temp = pSnk->snkListe->adPremiere->suivant;
+    for (i=0;i<snkGetTaille(pSnk);i++)
+    {
+        if ((snkGetX(pSnk)==celGetX(temp) && (snkGetY(pSnk)-1==celGetY(temp))))
+            {
+                printf("invalide\n");
+                return 0;
+            }
+        temp=temp->suivant;
+    }
+    return 1;
+}
+
+/*Teste si le snake peut aller a gauche et change sa position si possible*/
+void snkGauche(Snake *pSnk, const Terrain *pTer, Nourriture *pNour)
+{
+	if (terEstPositionPersoValide( pTer, snkGetX(pSnk)-1,snkGetY(pSnk))&& \
+     (snkPosValGauche(pSnk)))
+	{
+	    lisAjoutTeteGauche(pSnk->snkListe);
+		lisSuppQueue(pSnk->snkListe);
+		snkMange(pSnk,pNour, pTer);
+		snkGrandit(pSnk);
+		snkSetDir(pSnk,'g');
+	}
+	else
+	{
+        snkSetVies(pSnk,1);
+        snkInitPerdu(pSnk);
+	}
+}
+
+/*Teste si le snake peut aller a droite et change sa position si possible*/
+void snkDroite(Snake *pSnk, const Terrain *pTer, Nourriture *pNour)
+{
+    if (terEstPositionPersoValide( pTer, snkGetX(pSnk)+1,snkGetY(pSnk))&& \
+     (snkPosValDroite(pSnk)))
+    {
+		lisAjoutTeteDroite(pSnk->snkListe);
+		lisSuppQueue(pSnk->snkListe);
+		snkMange(pSnk,pNour, pTer);
+		snkGrandit(pSnk);
+		snkSetDir(pSnk,'d');
+    }
+    else
+	{
+        snkSetVies(pSnk,1);
+        snkInitPerdu(pSnk);
+	}
+}
+
+/*Teste si le snake peut aller en haut et change sa position si possible*/
+void snkHaut(Snake *pSnk, const Terrain *pTer, Nourriture *pNour)
+{
+    if (terEstPositionPersoValide( pTer, snkGetX(pSnk),snkGetY(pSnk)-1)&& \
+        (snkPosValHaut(pSnk)))
+	{
+        lisAjoutTeteHaut(pSnk->snkListe);
+        lisSuppQueue(pSnk->snkListe);
+        snkMange(pSnk,pNour, pTer);
+        snkGrandit(pSnk);
+        snkSetDir(pSnk,'h');
+	}
+	else
+	{
+        snkSetVies(pSnk,1);
+        snkInitPerdu(pSnk);
+	}
+}
+
+/*Teste si le snake peut aller en bas et change sa position si possible*/
+void snkBas(Snake *pSnk, const Terrain *pTer, Nourriture *pNour)
+{
+    if (terEstPositionPersoValide( pTer, snkGetX(pSnk),snkGetY(pSnk)+1) && \
+        (snkPosValBas(pSnk)))
+    {
+        lisAjoutTeteBas(pSnk->snkListe);
+		lisSuppQueue(pSnk->snkListe);
+		snkMange(pSnk,pNour, pTer);
+		snkGrandit(pSnk);
+		snkSetDir(pSnk,'b');
+    }
+    else
+	{
+        snkSetVies(pSnk,1);
+        snkInitPerdu(pSnk);
+	}
+}
+
+/*Rajoute une queue à gauche*/
+void snkAjoutQueue(Snake *pSnk)
+{
+    lisAjoutQueue(pSnk->snkListe);
+}
+
+/*Crée le snake avec la taille passée dans l'initialisation*/
+void snkCreation(Snake *pSnk)
+{
+    int i;
+    for(i=0; i<snkGetTaille(pSnk); i++)
+    {
+        snkAjoutQueue(pSnk);
+    }
+}

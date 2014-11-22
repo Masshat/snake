@@ -1,0 +1,230 @@
+/**
+@brief jeu.c a le code des fonctions pour le module jeu.
+@author Roberto Medina Bonilla & Yoann Jouvent
+@file svn/jeu.c
+@version 0.1
+@date 2012/03/26
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "jeu.h"
+#include "snake.h"
+#include "terrain.h"
+#include "nourriture.h"
+
+/*Initialise le jeu, en initialisant le snake et le terrain*/
+void jeuInit(Jeu *pJeu)
+{
+	snkInit(&(pJeu->snk));
+	terAfficheDepuisFichier("data/snkLevel1.txt",&(pJeu->ter));
+	snkCreation(&(pJeu->snk));
+	nourPosition(&(pJeu->ter),&(pJeu->nour));
+	pJeu->niveau=1;
+}
+
+
+/*Renvoie un pointeur sur le terrain*/
+Terrain *jeuGetTerrainPtr(Jeu *pJeu)
+{
+	return &(pJeu->ter);
+}
+
+/*Renvoie un pointeur sur le snake*/
+Snake *jeuGetSnakePtr(Jeu *pJeu)
+{
+	return &(pJeu->snk);
+}
+
+/*Renvoie un pointeur sur la nourriture*/
+Nourriture *jeuGetNourPtr(Jeu *pJeu)
+{
+    return &(pJeu->nour);
+}
+
+/*Renvoie un pointeur sur le terrain sans le modifier*/
+const Terrain *jeuGetConstTerrainPtr(const Jeu *pJeu)
+{
+	return &(pJeu->ter);
+}
+
+/*Renvoie un pointeur sur le snake sans le modifier*/
+const Snake *jeuGetConstSnakePtr(const Jeu *pJeu)
+{
+	return &(pJeu->snk);
+}
+
+/* Renvoie un pointeur sur la nourriture sans la modifier*/
+const Nourriture *jeuGetConstNourPtr(const Jeu *pJeu)
+{
+    return &(pJeu->nour);
+}
+
+/*Renvoie le niveau du jeu*/
+const int jeuGetNiveau (const Jeu *pJeu)
+{
+    return pJeu->niveau;
+}
+
+/*Change le niveau du jeu a celui passé en paramètre*/
+void jeuSetNiveau (Jeu *pJeu,const int n)
+{
+    pJeu->niveau = n;
+}
+
+/*Change de niveau après un certain score*/
+void jeuChangeNiveau(Jeu *pJeu)
+{
+    if(snkGetScore(&(pJeu->snk)) > 100 && jeuGetNiveau(pJeu)==1)
+    {
+        terAfficheDepuisFichier("data/snkLevel2.txt",&(pJeu->ter));
+        pJeu->snk.vies++;
+        snkInitPerdu(&(pJeu->snk));
+        nourPosition(&(pJeu->ter),&(pJeu->nour));
+        jeuSetNiveau(pJeu,2);
+    }
+    if(snkGetScore(&(pJeu->snk)) > 200 && jeuGetNiveau(pJeu)==2)
+    {
+        terAfficheDepuisFichier("data/snkLevel3.txt",&(pJeu->ter));
+        pJeu->snk.vies++;
+        snkInitPerdu(&(pJeu->snk));
+        nourPosition(&(pJeu->ter),&(pJeu->nour));
+        jeuSetNiveau(pJeu,3);
+    }
+    if(snkGetScore(&(pJeu->snk)) > 300 && jeuGetNiveau(pJeu)==3)
+    {
+        terAfficheDepuisFichier("data/snkLevel4.txt",&(pJeu->ter));
+        pJeu->snk.vies++;
+        snkInitPerdu(&(pJeu->snk));
+        nourPosition(&(pJeu->ter),&(pJeu->nour));
+        jeuSetNiveau(pJeu,4);
+    }
+    if(snkGetScore(&(pJeu->snk)) > 400 && jeuGetNiveau(pJeu)==4)
+    {
+        terAfficheDepuisFichier("data/snkLevel5.txt",&(pJeu->ter));
+        pJeu->snk.vies++;
+        snkInitPerdu(&(pJeu->snk));
+        nourPosition(&(pJeu->ter),&(pJeu->nour));
+        jeuSetNiveau(pJeu,5);
+    }
+    if(snkGetScore(&(pJeu->snk)) > 500 && jeuGetNiveau(pJeu)==5)
+    {
+        terAfficheDepuisFichier("data/snkLevel6.txt",&(pJeu->ter));
+        pJeu->snk.vies++;
+        snkInitPerdu(&(pJeu->snk));
+        nourPosition(&(pJeu->ter),&(pJeu->nour));
+        jeuSetNiveau(pJeu,6);
+    }
+}
+
+/*Teste le nombre de vie du jouer et reinitialise tout si le jouer a perdu*/
+int jeuPerdre (Jeu *pJeu)
+{
+    if(snkGetVies(&(pJeu->snk))<0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*Récupère l'action du clavier de l'utilisateur*/
+void jeuActionClavier(Jeu *pJeu, const char touche)
+{
+	switch(touche)
+	{
+		case 'g' :
+				if (snkGetDir(&(pJeu->snk))=='h' || snkGetDir(&(pJeu->snk))=='b' || snkGetDir(&(pJeu->snk))=='n')
+				{
+				    snkGauche(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+                    jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+				}
+				break;
+		case 'd' :
+                if (snkGetDir(&(pJeu->snk))=='h' || snkGetDir(&(pJeu->snk))=='b' || snkGetDir(&(pJeu->snk))=='n')
+                {
+                    snkDroite(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+                    jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+                }
+				break;
+		case 'h' :
+                if (snkGetDir(&(pJeu->snk))=='g' || snkGetDir(&(pJeu->snk))=='d' || snkGetDir(&(pJeu->snk))=='n')
+                {
+                    snkHaut(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+                    jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+                }
+				break;
+		case 'b' :
+				if (snkGetDir(&(pJeu->snk))=='g' || snkGetDir(&(pJeu->snk))=='d' || snkGetDir(&(pJeu->snk))=='n')
+				{
+				    snkBas(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+                    jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+				}
+				break;
+	}
+}
+
+/*Fait avancer le snake automatiquement a partir de la direction donnee*/
+void jeuAvance(Jeu *pJeu)
+{
+        if (snkGetDir(&(pJeu->snk))=='g')
+        {
+            snkGauche(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+            jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+        }
+        if (snkGetDir(&(pJeu->snk))=='d')
+        {
+            snkDroite(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+            jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+        }
+        if (snkGetDir(&(pJeu->snk))=='h')
+        {
+            snkHaut(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+            jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+        }
+        if (snkGetDir(&(pJeu->snk))=='b')
+        {
+            snkBas(&(pJeu->snk), &(pJeu->ter), &(pJeu->nour));
+            jeuChangeNiveau(pJeu); jeuPerdre(pJeu);
+        }
+}
+
+void jeuGetScore (const char * monFic, Jeu *pJeu)
+{
+    int i,r;
+    char monFic2[64];
+    FILE * FicA;
+    FicA = fopen (monFic,"r");
+    if(FicA == NULL)
+    {
+        sprintf( monFic2, "../%s", monFic);
+        FicA = fopen (monFic2,"r");
+    }
+    if(FicA == NULL)
+    {
+        printf("Impossible d'ouvrir le fichier \n");
+        exit(EXIT_FAILURE);
+    }
+
+    for(i=0;i<10;i++)
+    {
+        r=fscanf(FicA,"%c",&pJeu->max_score[i]);
+    }
+    if(feof(FicA))
+    {
+        printf("Fin de fichier \n");
+    }
+    else
+    {
+        printf("Pas de probleme \n");
+    }
+}
+
+void jeuScoreAff(Jeu *pJeu)
+{
+    int i;
+    for (i=0;i<20;i++)
+    {
+        printf("%c",pJeu->max_score[i]);
+    }
+}
